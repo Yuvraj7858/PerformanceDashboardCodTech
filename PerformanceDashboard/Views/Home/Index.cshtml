@@ -1,0 +1,71 @@
+﻿@{
+    ViewData["Title"] = "Performance Dashboard";
+}
+
+<h2>Performance Dashboard</h2>
+<div id="status"></div>
+<div id="time"></div>
+<div id="cpu"></div>
+<div id="memory"></div>
+
+<canvas id="metricsChart" width="400" height="200"></canvas>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    const labels = [];
+    const cpuData = [];
+    const memoryData = [];
+
+    const ctx = document.getElementById('metricsChart').getContext('2d');
+    const metricsChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'CPU Usage (%)',
+                    data: cpuData,
+                    borderColor: 'red',
+                    fill: false
+                },
+                {
+                    label: 'Memory Usage (MB)',
+                    data: memoryData,
+                    borderColor: 'blue',
+                    fill: false
+                }
+            ]
+        }
+    });
+
+    async function loadMetrics() {
+        try {
+            const response = await fetch('/api/Metrics/status');
+            const data = await response.json();
+
+            document.getElementById('status').innerText = `Status: ${data.message}`;
+            document.getElementById('time').innerText = `Time: ${new Date(data.time).toLocaleString()}`;
+            document.getElementById('cpu').innerText = `CPU Usage: ${data.cpuUsage}%`;
+            document.getElementById('memory').innerText = `Memory Usage: ${data.memoryUsage} MB`;
+
+            // Chart में add करो
+            labels.push(new Date(data.time).toLocaleTimeString());
+            cpuData.push(data.cpuUsage);
+            memoryData.push(data.memoryUsage);
+
+            // ज्यादा data न हो, इसलिए max 10 points रखें
+            if (labels.length > 10) {
+                labels.shift();
+                cpuData.shift();
+                memoryData.shift();
+            }
+
+            metricsChart.update();
+        } catch (error) {
+            console.error('Error fetching metrics:', error);
+        }
+    }
+
+    loadMetrics();
+    setInterval(loadMetrics, 5000); // हर 5 सेकंड में अपडेट
+</script>
